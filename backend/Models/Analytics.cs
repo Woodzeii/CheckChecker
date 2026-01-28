@@ -27,10 +27,24 @@ public class MonthlyPlannedExpense
     public int Year { get; set; }
     public int Month { get; set; }
 
-    public string CategoryName { get; set; }
+    public int UserCategoryId { get; set; }
     public UserCategory Category { get; set; } = default!;
 
     public decimal PlannedAmount { get; set; }
+}
+//Переносимые на след месяца заплан. расходы(дефолтные)
+public class RecurringPlannedExpense
+{
+    public int Id { get; set; }
+
+    public int UserId { get; set; }
+    public User User { get; set; } = default!;
+
+    public int UserCategoryId { get; set; }
+    public UserCategory Category { get; set; } = default!;
+
+    public decimal PlannedAmount { get; set; }
+    public bool IsActive { get; set; } = true;
 }
 //Запланированные доходы(чтобы сравнить с фактическими).
 public class MonthlyPlannedIncome
@@ -42,6 +56,7 @@ public class MonthlyPlannedIncome
 
     public int Year { get; set; }
     public int Month { get; set; }
+    public string? Description { get; set; }
 
     public decimal PlannedAmount { get; set; }
 }
@@ -63,22 +78,7 @@ public class Income
 }
 
 
-//Переносимые на след месяца заплан. расходы(дефолтные)
-public class RecurringPlannedExpense
-{
-    public int Id { get; set; }
 
-    public int UserId { get; set; }
-    public User User { get; set; } = default!;
-
-    public string CategoryName { get; set; }
-    public UserCategory Category { get; set; } = default!;
-
-    public decimal PlannedAmount { get; set; }
-
-    // Например, каждый месяц; позже можно расширить до более сложных правил
-    public bool IsActive { get; set; } = true;
-}
 
 //Ежемесячные доходы(Если запрлата или выпаты статичны)
 public class RecurringIncome

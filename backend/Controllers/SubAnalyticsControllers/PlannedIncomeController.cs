@@ -24,6 +24,7 @@ public class PlannedIncomeController : ControllerBase
         public int Month { get; set; }
 
         public decimal PlannedAmount { get; set; }
+        public string? Description { get; set; }
 
         public bool SaveAsRecurring { get; set; }
     }
@@ -37,7 +38,8 @@ public class PlannedIncomeController : ControllerBase
             .SingleOrDefaultAsync(x =>
                 x.UserId == userId &&
                 x.Year == request.Year &&
-                x.Month == request.Month);
+                x.Month == request.Month &&
+                x.Description ==request.Description);
 
         if (monthly is null)
         {
@@ -46,13 +48,15 @@ public class PlannedIncomeController : ControllerBase
                 UserId = userId,
                 Year = request.Year,
                 Month = request.Month,
-                PlannedAmount = request.PlannedAmount
+                PlannedAmount = request.PlannedAmount,
+                Description = request.Description
             };
             _context.MonthlyPlannedIncomes.Add(monthly);
         }
         else
         {
             monthly.PlannedAmount = request.PlannedAmount;
+            monthly.Description = request.Description;
         }
 
         if (request.SaveAsRecurring)
@@ -69,7 +73,7 @@ public class PlannedIncomeController : ControllerBase
                     UserId = userId,
                     Amount = request.PlannedAmount,
                     Category = null,
-                    Description = "Плановый доход",
+                    Description = request.Description ?? "Плановый доход",
                     IsActive = true
                 };
                 _context.RecurringIncomes.Add(recurring);
@@ -85,17 +89,36 @@ public class PlannedIncomeController : ControllerBase
         return Ok();
     }
 
+    
     [HttpGet]
-    public async Task<ActionResult<MonthlyPlannedIncome?>> Get(int year, int month)
+    public async Task<ActionResult<IEnumerable<MonthlyPlannedIncome>>> Get(int year, int month)
     {
         var userId = User.GetUserId();
 
-        var monthly = await _context.MonthlyPlannedIncomes
-            .SingleOrDefaultAsync(x =>
+        var items = await _context.MonthlyPlannedIncomes
+            .Where(x =>
                 x.UserId == userId &&
                 x.Year == year &&
-                x.Month == month);
+                x.Month == month)
+            .ToListAsync();
 
-        return Ok(monthly);
+        return Ok(items);
+    }
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var userId = User.GetUserId();
+
+        var item = await _context.MonthlyPlannedIncomes
+            .SingleOrDefaultAsync(x => x.Id == id && x.UserId == userId);
+
+        if (item is null)
+            return NotFound();
+
+        _context.MonthlyPlannedIncomes.Remove(item);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
     }
 }
+

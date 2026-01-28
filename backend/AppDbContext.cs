@@ -28,7 +28,7 @@ public class AppDbContext : DbContext
             .IsUnique();
         
         modelBuilder.Entity<MonthlyPlannedExpense>()
-            .HasIndex(p => new { p.UserId, p.Year, p.Month, p.CategoryName })
+            .HasIndex(p => new { p.UserId, p.Year, p.Month, p.UserCategoryId })
             .IsUnique();
         }
     }

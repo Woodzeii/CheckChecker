@@ -40,10 +40,14 @@ public class AnalyticsController : ControllerBase
         var initialBudget = budget?.InitialAmount ?? 0m;
 
         // 2. Плановый доход
-        var plannedIncome = await _context.MonthlyPlannedIncomes
-            .Where(x => x.UserId == userId && x.Year == year && x.Month == month)
-            .Select(x => x.PlannedAmount)
-            .SingleOrDefaultAsync();
+        var monthlyPlannedIncomes = await _context.MonthlyPlannedIncomes
+            .Where(x =>
+                x.UserId == userId &&
+                x.Year == year &&
+                x.Month == month)
+            .ToListAsync();
+
+        var plannedIncomeTotal = monthlyPlannedIncomes.Sum(x => x.PlannedAmount);
 
         // 3. Фактические доходы
         var incomes = await _context.Incomes
@@ -66,47 +70,53 @@ public class AnalyticsController : ControllerBase
         var actualExpensesTotal = receipts.Sum(x => x.TotalSum); // подстроить под твоё поле суммы
 
         // Позиции чеков за месяц
-var receiptItems = await _context.ReceiptItems
-    .Include(x => x.Receipt)
-    .Where(x =>
-        x.Receipt.UserId == userId &&
-        x.Receipt.DateTime >= start &&
-        x.Receipt.DateTime < end)
-    .ToListAsync();
+    var receiptItems = await _context.ReceiptItems
+        .Include(x => x.Receipt)
+        .Where(x =>
+            x.Receipt.UserId == userId &&
+            x.Receipt.DateTime >= start &&
+            x.Receipt.DateTime < end)
+        .ToListAsync();
 
-// Группировка по строковому Category
-var actualByCategory = receiptItems
-    .GroupBy(x => x.Category ?? "Без категории")
-    .Select(g => new
-    {
-        CategoryName = g.Key,
-        Actual = g.Sum(i => i.Sum)
-    })
-    .ToList();
+    // Группировка по строковому Category
+    var actualByCategory = receiptItems
+        .GroupBy(x => x.Category ?? "Без категории")
+        .Select(g => new
+        {
+            CategoryName = g.Key,
+            Actual = g.Sum(i => i.Sum)
+        })
+        .ToList();
 
-// Плановые расходы по категориям у тебя сейчас завязаны на CategoryId,
-// но раз в чеке только строки, можно пока тоже хранить план по имени категории:
-var plannedByCategory = await _context.MonthlyPlannedExpenses
-    .Where(x =>
-        x.UserId == userId &&
-        x.Year == year &&
-        x.Month == month)
-    .ToListAsync();
+
+
+        var plannedByCategory = await _context.MonthlyPlannedExpenses
+            .Include(x => x.Category)
+            .Where(x =>
+                x.UserId == userId &&
+                x.Year == year &&
+                x.Month == month)
+            .ToListAsync();
 
 // допустим, в MonthlyPlannedExpense вместо CategoryId сейчас есть CategoryName (string)
 var byCategory = new List<CategoryAnalyticsItem>();
 
 foreach (var p in plannedByCategory)
 {
+    // безопасно берём имя категории
+    var categoryName = string.IsNullOrWhiteSpace(p.Category?.Name)
+        ? "Без категории"
+        : p.Category.Name;
+
     var actual = actualByCategory
-        .FirstOrDefault(a => a.CategoryName == p.CategoryName);
+        .FirstOrDefault(a => a.CategoryName == categoryName);
 
     var actualValue = actual?.Actual ?? 0m;
 
     byCategory.Add(new CategoryAnalyticsItem
     {
-        CategoryId = 0, // временно, пока нет числового Id
-        CategoryName = p.CategoryName,
+        CategoryId = 0,
+        CategoryName = categoryName,
         Planned = p.PlannedAmount,
         Actual = actualValue,
         Difference = actualValue - p.PlannedAmount
@@ -160,7 +170,7 @@ foreach (var a in actualByCategory)
             Year = year,
             Month = month,
             InitialBudget = initialBudget,
-            PlannedIncome = plannedIncome,
+            PlannedIncome = plannedIncomeTotal,
             ActualIncome = actualIncome,
             PlannedExpensesTotal = plannedExpensesTotal,
             ActualExpensesTotal = actualExpensesTotal,

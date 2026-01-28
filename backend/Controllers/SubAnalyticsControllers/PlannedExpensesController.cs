@@ -29,62 +29,75 @@ public class PlannedExpensesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Upsert([FromBody] UpsertMonthlyPlannedExpenseRequest request)
-    {
-        var userId = User.GetUserId();
+public async Task<IActionResult> Upsert([FromBody] UpsertMonthlyPlannedExpenseRequest request)
+{
+    var userId = User.GetUserId();
 
-        var monthly = await _context.MonthlyPlannedExpenses
+    // 1. Находим категорию пользователя по имени
+    var category = await _context.UserCategories
+        .SingleOrDefaultAsync(c =>
+            c.UserId == userId &&
+            c.Name == request.CategoryName);
+
+    if (category is null)
+    {
+        return BadRequest($"Категория '{request.CategoryName}' не найдена у пользователя.");
+    }
+
+    // 2. Месячный план по этой категории
+    var monthly = await _context.MonthlyPlannedExpenses
+        .SingleOrDefaultAsync(x =>
+            x.UserId == userId &&
+            x.Year == request.Year &&
+            x.Month == request.Month &&
+            x.UserCategoryId == category.Id);
+
+    if (monthly is null)
+    {
+        monthly = new MonthlyPlannedExpense
+        {
+            UserId = userId,
+            Year = request.Year,
+            Month = request.Month,
+            UserCategoryId = category.Id,
+            PlannedAmount = request.PlannedAmount
+        };
+        _context.MonthlyPlannedExpenses.Add(monthly);
+    }
+    else
+    {
+        monthly.PlannedAmount = request.PlannedAmount;
+    }
+
+    // 3. Recurring, если нужно
+    if (request.SaveAsRecurring)
+    {
+        var recurring = await _context.RecurringPlannedExpenses
             .SingleOrDefaultAsync(x =>
                 x.UserId == userId &&
-                x.Year == request.Year &&
-                x.Month == request.Month &&
-                x.CategoryName == request.CategoryName);
+                x.UserCategoryId == category.Id);
 
-        if (monthly is null)
+        if (recurring is null)
         {
-            monthly = new MonthlyPlannedExpense
+            recurring = new RecurringPlannedExpense
             {
                 UserId = userId,
-                Year = request.Year,
-                Month = request.Month,
-                CategoryName = request.CategoryName,
-                PlannedAmount = request.PlannedAmount
+                UserCategoryId = category.Id,
+                PlannedAmount = request.PlannedAmount,
+                IsActive = true
             };
-            _context.MonthlyPlannedExpenses.Add(monthly);
+            _context.RecurringPlannedExpenses.Add(recurring);
         }
         else
         {
-            monthly.PlannedAmount = request.PlannedAmount;
+            recurring.PlannedAmount = request.PlannedAmount;
+            recurring.IsActive = true;
         }
-
-        if (request.SaveAsRecurring)
-        {
-            var recurring = await _context.RecurringPlannedExpenses
-                .SingleOrDefaultAsync(x =>
-                    x.UserId == userId &&
-                    x.CategoryName == request.CategoryName);
-
-            if (recurring is null)
-            {
-                recurring = new RecurringPlannedExpense
-                {
-                    UserId = userId,
-                    CategoryName = request.CategoryName,
-                    PlannedAmount = request.PlannedAmount,
-                    IsActive = true
-                };
-                _context.RecurringPlannedExpenses.Add(recurring);
-            }
-            else
-            {
-                recurring.PlannedAmount = request.PlannedAmount;
-                recurring.IsActive = true;
-            }
-        }
-
-        await _context.SaveChangesAsync();
-        return Ok();
     }
+
+    await _context.SaveChangesAsync();
+    return Ok();
+}
 
     // Все плановые расходы по категориям за месяц
     [HttpGet]
