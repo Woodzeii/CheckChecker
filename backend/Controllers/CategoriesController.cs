@@ -10,11 +10,11 @@ namespace backend.Controllers
     [Authorize]
     public class CategoriesController : ControllerBase
     {
-        private readonly AppDbContext _db;
+        private readonly AppDbContext _context;
 
         public CategoriesController(AppDbContext db)
         {
-            _db = db;
+            _context = db;
         }
 
         // Достаём userId из JWT (ClaimTypes.NameIdentifier)
@@ -38,7 +38,7 @@ namespace backend.Controllers
         {
             var userId = GetUserId();
 
-            var cats = await _db.UserCategories
+            var cats = await _context.UserCategories
                 .Where(c => c.UserId == userId)
                 .OrderBy(c => c.IsDefault)   // сначала пользовательские, потом дефолтные
                 .ThenBy(c => c.Name)
@@ -64,14 +64,14 @@ namespace backend.Controllers
                 return BadRequest("Категория 'другое' создаётся автоматически и не может быть добавлена вручную.");
 
             // Сколько уже есть пользовательских (не IsDefault)
-            var customCount = await _db.UserCategories
+            var customCount = await _context.UserCategories
                 .CountAsync(c => c.UserId == userId && !c.IsDefault, ct);
 
             if (customCount >= 9) // 9 своих + 1 'другое' = 10
                 return BadRequest("Лимит категорий: максимум 10 (включая 'другое').");
 
             // Проверка на дубликат
-            var exists = await _db.UserCategories.AnyAsync(
+            var exists = await _context.UserCategories.AnyAsync(
                 c => c.UserId == userId && c.Name == normalizedName,
                 ct);
 
@@ -85,8 +85,8 @@ namespace backend.Controllers
                 IsDefault = false
             };
 
-            _db.UserCategories.Add(category);
-            await _db.SaveChangesAsync(ct);
+            _context.UserCategories.Add(category);
+            await _context.SaveChangesAsync(ct);
 
             return CreatedAtAction(nameof(Get), new { id = category.Id }, category);
         }
@@ -98,7 +98,7 @@ namespace backend.Controllers
         {
             var userId = GetUserId();
 
-            var cat = await _db.UserCategories
+            var cat = await _context.UserCategories
                 .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId, ct);
 
             if (cat == null)
@@ -107,8 +107,8 @@ namespace backend.Controllers
             if (cat.IsDefault || cat.Name.Equals("другое", StringComparison.OrdinalIgnoreCase))
                 return BadRequest("Нельзя удалить категорию 'другое' и дефолтные категории.");
 
-            _db.UserCategories.Remove(cat);
-            await _db.SaveChangesAsync(ct);
+            _context.UserCategories.Remove(cat);
+            await _context.SaveChangesAsync(ct);
 
             return NoContent();
         }

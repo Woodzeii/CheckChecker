@@ -17,7 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Income> Incomes { get; set; } = default!;
     public DbSet<RecurringPlannedExpense> RecurringPlannedExpenses { get; set; } = default!;
     public DbSet<RecurringIncome> RecurringIncomes { get; set; } = default!;
-   
+    public DbSet<ManualExpense> ManualExpenses { get; set; }
     // ...
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

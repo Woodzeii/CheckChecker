@@ -56,6 +56,8 @@ public class MonthlyPlannedIncome
 
     public int Year { get; set; }
     public int Month { get; set; }
+    public int UserCategoryId { get; set; }
+    public UserCategory Category { get; set; } = default!;
     public string? Description { get; set; }
 
     public decimal PlannedAmount { get; set; }
@@ -89,7 +91,7 @@ public class RecurringIncome
     public User User { get; set; } = default!;
 
     public decimal Amount { get; set; }
-
+    public int UserCategoryId { get; set; }
     public string? Category { get; set; }
     public string? Description { get; set; }
 

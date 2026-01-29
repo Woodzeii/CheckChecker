@@ -67,7 +67,14 @@ public class AnalyticsController : ControllerBase
                 x.DateTime < end)
             .ToListAsync();
 
-        var actualExpensesTotal = receipts.Sum(x => x.TotalSum); // подстроить под твоё поле суммы
+        var actualExpensesTotal = await (from ri in _context.ReceiptItems
+            join r in _context.Receipts on ri.ReceiptId equals r.Id
+            where r.UserId == userId && r.DateTime >= start && r.DateTime < end
+            select ri.Sum).SumAsync();
+
+        actualExpensesTotal += await (from me in _context.ManualExpenses
+            where me.UserId == userId && me.DateTime >= start && me.DateTime < end
+            select me.Amount).SumAsync(); // подстроить под твоё поле суммы
 
         // Позиции чеков за месяц
     var receiptItems = await _context.ReceiptItems

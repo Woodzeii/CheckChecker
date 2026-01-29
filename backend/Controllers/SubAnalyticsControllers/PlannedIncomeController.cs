@@ -6,40 +6,48 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
+using backend; // ...
+[ApiController][Route("api/[controller]")][Authorize]
 public class PlannedIncomeController : ControllerBase
 {
     private readonly AppDbContext _context;
-
-    public PlannedIncomeController(AppDbContext context)
+    public PlannedIncomeController(AppDbContext context) => _context = context;
+    public class PlannedIncomeDto  // ← добавь
     {
-        _context = context;
+        public int Id { get; set; }
+        public string CategoryName { get; set; } = null!;
+        public decimal PlannedAmount { get; set; }
+        public string? Description { get; set; }
     }
-
     public class UpsertMonthlyPlannedIncomeRequest
     {
         public int Year { get; set; }
         public int Month { get; set; }
-
+        public string CategoryName { get; set; } = null!;  // ← добавь как в расходах
         public decimal PlannedAmount { get; set; }
         public string? Description { get; set; }
-
         public bool SaveAsRecurring { get; set; }
     }
 
     [HttpPost]
     public async Task<IActionResult> Upsert([FromBody] UpsertMonthlyPlannedIncomeRequest request)
     {
+        if (!ModelState.IsValid) return BadRequest(ModelState);  // ← добавь
+
         var userId = User.GetUserId();
 
+        // Найди категорию
+        var category = await _context.UserCategories
+            .FirstOrDefaultAsync(c => c.UserId == userId && c.Name == request.CategoryName);  // ← добавь
+        if (category == null) return BadRequest("Категория не найдена");
+
+        // Monthly по категории (как расходы)
         var monthly = await _context.MonthlyPlannedIncomes
-            .SingleOrDefaultAsync(x =>
+            .FirstOrDefaultAsync(x =>  // ← FirstOrDefaultAsync
                 x.UserId == userId &&
                 x.Year == request.Year &&
                 x.Month == request.Month &&
-                x.Description ==request.Description);
+                x.UserCategoryId == category.Id);  // ← по Id
 
         if (monthly is null)
         {
@@ -48,6 +56,7 @@ public class PlannedIncomeController : ControllerBase
                 UserId = userId,
                 Year = request.Year,
                 Month = request.Month,
+                UserCategoryId = category.Id,  // ← FK
                 PlannedAmount = request.PlannedAmount,
                 Description = request.Description
             };
@@ -59,24 +68,25 @@ public class PlannedIncomeController : ControllerBase
             monthly.Description = request.Description;
         }
 
+        // Recurring
         if (request.SaveAsRecurring)
         {
-            var recurring = await _context.RecurringIncomes
-                .SingleOrDefaultAsync(x =>
+            var recurring = await _context.RecurringIncomes  // ← RecurringPlannedIncomes?
+                .FirstOrDefaultAsync(x =>
                     x.UserId == userId &&
-                    x.Category == null);
+                    x.UserCategoryId == category.Id);  // ← по категории
 
             if (recurring is null)
             {
-                recurring = new RecurringIncome
+                recurring = new RecurringIncome  // ← правильная модель?
                 {
                     UserId = userId,
-                    Amount = request.PlannedAmount,
-                    Category = null,
+                    UserCategoryId = category.Id,
+                    Amount = request.PlannedAmount,  // Amount → PlannedAmount?
                     Description = request.Description ?? "Плановый доход",
                     IsActive = true
                 };
-                _context.RecurringIncomes.Add(recurring);
+                _context.RecurringIncomes.Add(recurring);  // DbSet?
             }
             else
             {
@@ -86,38 +96,37 @@ public class PlannedIncomeController : ControllerBase
         }
 
         await _context.SaveChangesAsync();
-        return Ok();
+        return Ok(new { success = true });
     }
 
-    
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<MonthlyPlannedIncome>>> Get(int year, int month)
+    [HttpGet("monthly")]
+    public async Task<ActionResult<List<PlannedIncomeDto>>> Get(int year, int month)  // query params
     {
         var userId = User.GetUserId();
-
         var items = await _context.MonthlyPlannedIncomes
-            .Where(x =>
-                x.UserId == userId &&
-                x.Year == year &&
-                x.Month == month)
+            .Include(x => x.Category)  // ← для имени
+            .Where(x => x.UserId == userId && x.Year == year && x.Month == month)
+            .Select(x => new PlannedIncomeDto  // DTO
+            {
+                Id = x.Id,
+                CategoryName = x.Category.Name,
+                PlannedAmount = x.PlannedAmount,
+                Description = x.Description
+            })
             .ToListAsync();
-
         return Ok(items);
     }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
         var userId = User.GetUserId();
-
         var item = await _context.MonthlyPlannedIncomes
-            .SingleOrDefaultAsync(x => x.Id == id && x.UserId == userId);
+            .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);  // ← First
 
-        if (item is null)
-            return NotFound();
-
+        if (item == null) return NotFound();
         _context.MonthlyPlannedIncomes.Remove(item);
         await _context.SaveChangesAsync();
-
         return NoContent();
     }
 }

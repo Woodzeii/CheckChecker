@@ -52,6 +52,21 @@ public class AuthController : ControllerBase
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
+        // ✅ АВТО-СОЗДАНИЕ ДЕФОЛТНЫХ КАТЕГОРИЙ ИЗ ТВОЕЙ МОДЕЛИ
+        foreach (var name in DefaultCategories.DefaultCategoryNames)
+        {
+            if (!await _context.UserCategories.AnyAsync(c => c.UserId == user.Id && c.Name == name))
+            {
+                _context.UserCategories.Add(new UserCategory
+                {
+                    UserId = user.Id,
+                    Name = name,
+                    IsDefault = name == "другое"
+                });
+            }
+        }
+        await _context.SaveChangesAsync();
+
         // СРАЗУ генерим JWT
         var token = GenerateJwtToken(user);
 

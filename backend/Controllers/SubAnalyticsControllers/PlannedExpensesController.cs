@@ -31,11 +31,14 @@ public class PlannedExpensesController : ControllerBase
     [HttpPost]
 public async Task<IActionResult> Upsert([FromBody] UpsertMonthlyPlannedExpenseRequest request)
 {
+    if (!ModelState.IsValid) 
+        return BadRequest(ModelState);
+    
     var userId = User.GetUserId();
 
     // 1. Находим категорию пользователя по имени
     var category = await _context.UserCategories
-        .SingleOrDefaultAsync(c =>
+        .FirstOrDefaultAsync(c =>
             c.UserId == userId &&
             c.Name == request.CategoryName);
 
@@ -46,7 +49,7 @@ public async Task<IActionResult> Upsert([FromBody] UpsertMonthlyPlannedExpenseRe
 
     // 2. Месячный план по этой категории
     var monthly = await _context.MonthlyPlannedExpenses
-        .SingleOrDefaultAsync(x =>
+        .FirstOrDefaultAsync(x =>
             x.UserId == userId &&
             x.Year == request.Year &&
             x.Month == request.Month &&
@@ -73,7 +76,7 @@ public async Task<IActionResult> Upsert([FromBody] UpsertMonthlyPlannedExpenseRe
     if (request.SaveAsRecurring)
     {
         var recurring = await _context.RecurringPlannedExpenses
-            .SingleOrDefaultAsync(x =>
+            .FirstOrDefaultAsync(x =>
                 x.UserId == userId &&
                 x.UserCategoryId == category.Id);
 

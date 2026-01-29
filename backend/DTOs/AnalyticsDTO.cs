@@ -32,3 +32,23 @@ public class DailySeries
     public List<decimal> Incomes { get; set; } = new();
 }
 
+
+//ручные добавления трат
+public class CreateManualExpenseRequest
+{
+    public DateTime DateTime { get; set; }  // today по умолчанию
+    public decimal Amount { get; set; }
+    public int UserCategoryId { get; set; }  // из GET /api/categories
+    public string? Description { get; set; }
+}
+
+public class ManualExpenseDto
+{
+    public int Id { get; set; }
+    public DateTime DateTime { get; set; }
+    public decimal Amount { get; set; }
+    public string CategoryName { get; set; } = null!;
+    public string Description { get; set; } = null!;
+}
+
+

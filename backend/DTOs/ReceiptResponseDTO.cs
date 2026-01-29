@@ -15,3 +15,18 @@ public class ParseReceiptRequest
 {
     public string QrRaw { get; set; } = null!;
 }
+
+
+
+public class CategoryStatsDto
+{
+    public string CategoryName { get; set; } = null!;
+    public decimal TotalAmount { get; set; }
+    public int ItemCount { get; set; }
+    public List<string> TopItems { get; set; } = new();
+}
+    
+public class ReceiptAnalyticsResponse
+{
+    public List<CategoryStatsDto> Categories { get; set; } = new();
+}

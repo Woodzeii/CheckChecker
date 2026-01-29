@@ -7,13 +7,14 @@ public class UserCategory
         public string Name { get; set; } = "";
         public bool IsDefault { get; set; }      // системная/обязательная (например, "другое")
         public string? Color { get; set; }   // опционально для фронта
+        public string Type { get; set; } = "expense";
 }
 
 public class DefaultCategories
 {
         public static readonly string[] DefaultCategoryNames =
         {
-                "еда", "транспорт", "развлечения", "одежда", "медицина", "быт", "другое"
+                "Еда", "Транспорт", "Развлечения", "Одежда", "Медицина", "Быт", "другое"
         };
 }
 public class Category
