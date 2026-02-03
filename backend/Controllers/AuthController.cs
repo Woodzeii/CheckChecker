@@ -52,7 +52,7 @@ public class AuthController : ControllerBase
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        // ✅ АВТО-СОЗДАНИЕ ДЕФОЛТНЫХ КАТЕГОРИЙ ИЗ ТВОЕЙ МОДЕЛИ
+        // ✅ АВТО-СОЗДАНИЕ ДЕФОЛТНЫХ КАТЕГОРИЙ ИЗ дефолтной МОДЕЛИ
         foreach (var name in DefaultCategories.DefaultCategoryNames)
         {
             if (!await _context.UserCategories.AnyAsync(c => c.UserId == user.Id && c.Name == name))
@@ -97,7 +97,7 @@ public class AuthController : ControllerBase
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Login)
+            new Claim(ClaimTypes.Name, user.Name)
         };
 
         var key = new SymmetricSecurityKey(

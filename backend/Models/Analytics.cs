@@ -50,17 +50,15 @@ public class RecurringPlannedExpense
 public class MonthlyPlannedIncome
 {
     public int Id { get; set; }
-
     public int UserId { get; set; }
-    public User User { get; set; } = default!;
+    public User User { get; set; } = null!;
 
     public int Year { get; set; }
     public int Month { get; set; }
-    public int UserCategoryId { get; set; }
-    public UserCategory Category { get; set; } = default!;
-    public string? Description { get; set; }
 
+    public string? CategoryName { get; set; }      // как у Income
     public decimal PlannedAmount { get; set; }
+    public string? Description { get; set; }
 }
 
 //Доходы
@@ -75,7 +73,7 @@ public class Income
 
     public decimal Amount { get; set; }
 
-    public string? Category { get; set; }   // тип дохода: зарплата, стипендия и т.п.
+    public string? CategoryName { get; set; }   // тип дохода: зарплата, стипендия и т.п.
     public string? Description { get; set; }
 }
 
@@ -92,7 +90,7 @@ public class RecurringIncome
 
     public decimal Amount { get; set; }
     public int UserCategoryId { get; set; }
-    public string? Category { get; set; }
+    public string? CategoryName { get; set; }
     public string? Description { get; set; }
 
     public bool IsActive { get; set; } = true;

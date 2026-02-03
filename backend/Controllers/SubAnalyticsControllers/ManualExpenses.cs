@@ -71,4 +71,63 @@ public class ExpensesController : ControllerBase
             })
             .ToListAsync();
     }
+    
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAllExpenses(CancellationToken ct)
+    {
+        var userId = User.GetUserId();
+    
+        var receipts = await _context.Receipts
+            .Where(r => r.UserId == userId)
+            .Include(r => r.Items)
+            .Select(r => new UnifiedExpenseDto(
+                r.Id,
+                r.DateTime,
+                r.StoreName,
+                r.Items.FirstOrDefault().Category ?? "Не определена",
+                r.TotalSum,
+                r.Items.Count,
+                "receipt"
+            ))
+            .ToListAsync(ct);
+    
+        var manual = await _context.ManualExpenses
+            .Include(m => m.Category)
+            .Where(m => m.UserId == userId)
+            .Select(m => new UnifiedExpenseDto(
+                m.Id,
+                m.DateTime,
+                null,
+                m.Category.Name,
+                m.Amount,
+                1,
+                "manual"
+            ))
+            .ToListAsync(ct);
+    
+        var all = receipts
+            .Concat(manual)
+            .OrderByDescending(x => x.DateTime)
+            .ToList();
+    
+        return Ok(all);
+    }
+
+    
+    [HttpDelete("manual/{id:int}")]  // DELETE /api/expenses/manual/123
+    public async Task<IActionResult> DeleteManual(int id, CancellationToken ct)
+    {
+        var userId = User.GetUserId();
+    
+        var expense = await _context.ManualExpenses
+            .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId, ct);
+    
+        if (expense == null)
+            return NotFound("Ручной расход не найден");
+    
+        _context.ManualExpenses.Remove(expense);
+        await _context.SaveChangesAsync(ct);
+    
+        return NoContent();
+    }
 }

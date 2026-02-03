@@ -21,7 +21,7 @@ public class IncomesController : ControllerBase
     {
         public DateTime Date { get; set; }
         public decimal Amount { get; set; }
-        public string? Category { get; set; }
+        public string? CategoryName { get; set; }
         public string? Description { get; set; }
         public bool SaveAsRecurring { get; set; }
     }
@@ -36,7 +36,7 @@ public class IncomesController : ControllerBase
             UserId = userId,
             Date = request.Date,
             Amount = request.Amount,
-            Category = request.Category,
+            CategoryName = request.CategoryName,
             Description = request.Description
         };
 
@@ -47,7 +47,7 @@ public class IncomesController : ControllerBase
             var recurring = await _context.RecurringIncomes
                 .SingleOrDefaultAsync(x =>
                     x.UserId == userId &&
-                    x.Category == request.Category);
+                    x.CategoryName == request.CategoryName);
 
             if (recurring is null)
             {
@@ -55,7 +55,7 @@ public class IncomesController : ControllerBase
                 {
                     UserId = userId,
                     Amount = request.Amount,
-                    Category = request.Category,
+                    CategoryName = request.CategoryName,
                     Description = request.Description,
                     IsActive = true
                 };

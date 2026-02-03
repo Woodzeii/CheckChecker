@@ -126,7 +126,7 @@ public class ReceiptService : IReceiptService
 
         var itemsForPrompt = items.Select(i => new { name = i.Name }).ToArray();
         var itemsJson = JsonSerializer.Serialize(itemsForPrompt);
-
+            
         var prompt =
             $@"Ты классификатор товаров из чеков.
 Категории: {string.Join(", ", categories)}.
@@ -141,6 +141,7 @@ public class ReceiptService : IReceiptService
   ]
 }}";
 
+            //var prompt = "Answer 'hello' for test";
         var rawContent = await CallDeepseekAsync(prompt, ct);
         Console.WriteLine("Raw content Example:");
         Console.WriteLine(rawContent);
@@ -221,13 +222,13 @@ public async Task<string> CallDeepseekAsync(string userPrompt, CancellationToken
 
     var body = new
     {
-        model = "deepseek/deepseek-r1-0528:free",
+        model = "tngtech/deepseek-r1t2-chimera:free",
         messages = new[]
         {
             new { role = "user", content = userPrompt }
         }
     };
-
+    
     var json = JsonSerializer.Serialize(body);
     using var request = new HttpRequestMessage(
         HttpMethod.Post,
@@ -240,22 +241,56 @@ public async Task<string> CallDeepseekAsync(string userPrompt, CancellationToken
     request.Headers.Add("HTTP-Referer", "https://checkchecker.local");
     request.Headers.Add("X-Title", "CheckChecker");
 
-    using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+    using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(90)); // чуть больше
     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
 
-    using var response = await client.SendAsync(request, linkedCts.Token);
-    response.EnsureSuccessStatusCode();
+    try
+    {
+        using var response = await client.SendAsync(request, linkedCts.Token);
+        response.EnsureSuccessStatusCode();
 
-    var responseJson = await response.Content.ReadAsStringAsync(linkedCts.Token);
+        var responseJson = await response.Content.ReadAsStringAsync(linkedCts.Token);
+        
 
-    using var doc = JsonDocument.Parse(responseJson);
-    var content = doc.RootElement
-        .GetProperty("choices")[0]
-        .GetProperty("message")
-        .GetProperty("content")
-        .GetString();
-    return content;
+        using var doc = JsonDocument.Parse(responseJson);
+        var root = doc.RootElement;
+
+        if (root.TryGetProperty("choices", out var choicesElement)
+            && choicesElement.ValueKind == JsonValueKind.Array
+            && choicesElement.GetArrayLength() > 0)
+        {
+            var content = choicesElement[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString();
+
+            if (!string.IsNullOrEmpty(content))
+                return content;
+        }
+
+// Если дошли сюда — формат ответа не тот, попробуем вытащить error
+        if (root.TryGetProperty("error", out var errorElement))
+        {
+            var msg = errorElement.GetProperty("message").GetString();
+            throw new Exception($"LLM error: {msg ?? "unknown error"}");
+        }
+
+// Если вообще что‑то странное
+        throw new Exception($"Unexpected LLM response: {responseJson}");
+
+    }
+    catch (OperationCanceledException ex) when (timeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
+    {
+        // именно timeout внешнего сервиса
+        throw new Exception("Сервис категоризации долго не отвечает, попробуйте позже.");
+    }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+    {
+        // клиент сам оборвал запрос — можно просто пробросить
+        throw;
+    }
 }
+
 
 //Извлечём джсон из Оупенроутер resppnse
 private static string ExtractJson(string content)

@@ -65,34 +65,47 @@ public class ReceiptsController : ControllerBase
     }
     
     
-    
-    //аналитика топ 3х расходов и категориц
+    //Считаем топ 3 по категориям и тратам.
     [HttpGet("analytics")]
     public async Task<ActionResult<ReceiptAnalyticsResponse>> GetReceiptAnalytics(int year, int month)
     {
         var userId = User.GetUserId();
-    
-        var analytics = await _context.ReceiptItems
+
+        // 1. Считаем агрегаты по категориям (без TopItems)
+        var raw = await _context.ReceiptItems
             .Include(ri => ri.Receipt)
-            .Where(ri => ri.Receipt.UserId == userId 
-                      && ri.Receipt.DateTime.Year == year 
-                      && ri.Receipt.DateTime.Month == month)
+            .Where(ri => ri.Receipt.UserId == userId
+                         && ri.Receipt.DateTime.Year == year
+                         && ri.Receipt.DateTime.Month == month)
             .GroupBy(ri => ri.Category ?? "Без категории")
-            .Select(g => new CategoryStatsDto
+            .Select(g => new
             {
                 CategoryName = g.Key,
-                TotalAmount = g.Sum(x => x.Sum),  // используй готовый Sum
+                TotalAmount = g.Sum(x => x.Sum),
                 ItemCount = g.Count(),
-                TopItems = g.OrderByDescending(x => x.Sum)
-                           .Take(3)
-                           .Select(x => x.Name)
-                           .ToList()
+                Items = g.Select(x => new { x.Name, x.Sum }).ToList()
+            })
+            .ToListAsync();
+
+        // 2. Досортировать в памяти по decimal
+        var analytics = raw
+            .Select(x => new CategoryStatsDto
+            {
+                CategoryName = x.CategoryName,
+                TotalAmount = x.TotalAmount,
+                ItemCount = x.ItemCount,
+                TopItems = x.Items
+                    .OrderByDescending(i => i.Sum)
+                    .Take(3)
+                    .Select(i => i.Name)
+                    .ToList()
             })
             .OrderByDescending(x => x.TotalAmount)
-            .ToListAsync();
-    
+            .ToList();
+
         return Ok(new ReceiptAnalyticsResponse { Categories = analytics });
     }
+
     
     
     

@@ -52,3 +52,15 @@ public class ManualExpenseDto
 }
 
 
+public record UnifiedExpenseDto(
+    int Id,
+    DateTime DateTime,
+    string? StoreName,
+    string Category,
+    decimal Amount,
+    int Positions,
+    string Source // "receipt" или "manual"
+);
+
+
+
