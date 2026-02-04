@@ -1,41 +1,53 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import "./custom.css";
-import ReduxProvider from "@/providers/ReduxProvider";
-import ConditionalLayout from "@/components/ConditionalLayout";
+import React from "react"
+import type { Metadata } from 'next'
+import { Geist, Geist_Mono } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
+import { ReduxProvider } from '@/components/providers/ReduxProvider'
+import './globals.css'
+import { Toaster } from "@/components/ui/toaster"
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+
+const _geist = Geist({ subsets: ["latin"] });
+const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CheckCheker",
-  description: "Приложение для учёта финансов",
-};
+  title: 'CheckChecker - Личный кабинет',
+  description: 'Личный кабинет для работы с чеками. Загружайте, анализируйте и отслеживайте свои расходы.',
+  generator: 'v0.app',
+  icons: {
+    icon: [
+      {
+        url: '/icon-light-32x32.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/icon-dark-32x32.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+      {
+        url: '/icon.svg',
+        type: 'image/svg+xml',
+      },
+    ],
+    apple: '/apple-icon.png',
+  },
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
-    <html lang="ru" className="h-full">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full bg-white text-gray-900`}
-      >
+    <html lang="ru">
+      <body className={`font-sans antialiased`}>
         <ReduxProvider>
-          <ConditionalLayout>
-            {children}
-          </ConditionalLayout>
+          {children}
+          <Toaster />
         </ReduxProvider>
+        <Analytics />
       </body>
     </html>
-  );
+  )
 }

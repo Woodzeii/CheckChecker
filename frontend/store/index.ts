@@ -1,30 +1,36 @@
-import { configureStore } from "@reduxjs/toolkit";
-import { persistStore, persistReducer } from "redux-persist";
-import storage from "redux-persist/lib/storage";
-import authReducer from "./slices/authSlice";
+/**
+ * Redux Store Configuration
+ * 
+ * Объединяет все slices и экспортирует типизированные hooks
+ */
 
-const authPersistConfig = {
-  key: "auth",
-  storage,
-  whitelist: ["isAuthenticated", "accessToken", "user"],
-};
-
-const persistedAuthReducer = persistReducer(authPersistConfig, authReducer);
+import { configureStore } from '@reduxjs/toolkit';
+import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
+import authReducer from './slices/authSlice';
+import receiptsReducer from './slices/receiptsSlice';
+import categoriesReducer from './slices/categoriesSlice';
+import incomeReducer from './slices/incomeSlice';
+import planningReducer from './slices/planningSlice';
+import analyticsReducer from './slices/analyticsSlice';
+import budgetReducer from './slices/budgetSlice';
 
 export const store = configureStore({
   reducer: {
-    auth: persistedAuthReducer,
+    auth: authReducer,
+    receipts: receiptsReducer,
+    categories: categoriesReducer,
+    income: incomeReducer,
+    planning: planningReducer,
+    analytics: analyticsReducer,
+    budget: budgetReducer,
   },
-  devTools: process.env.NODE_ENV !== "production",
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
-      },
-    }),
+  devTools: process.env.NODE_ENV !== 'production',
 });
 
-export const persistor = persistStore(store);
-
+// Типы для RootState и AppDispatch
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
+
+// Типизированные hooks
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;

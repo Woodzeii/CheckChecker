@@ -1,239 +1,149 @@
-import { API_CONFIG } from '@/config/api';
-
 /**
- * Типы для API ответов
+ * API Client - обёртка над fetch для работы с backend
+ * 
+ * Автоматически:
+ * - Подставляет baseURL из конфига
+ * - Добавляет Authorization header с JWT токеном
+ * - Обрабатывает JSON responses
+ * - Обрабатывает ошибки 401 (Unauthorized)
  */
+
+import { BASE_URL } from '@/config/api';
+import { getToken, removeToken } from '@/lib/auth';
+
 export interface ApiResponse<T> {
-  data: T;
-  message?: string;
-  errors?: string[];
+  data?: T;
+  error?: string;
+  status: number;
 }
 
-export interface ApiError {
-  message: string;
-  status: number;
-  errors?: Record<string, string[]>;
+interface RequestOptions extends RequestInit {
+  skipAuth?: boolean;
 }
 
 /**
- * Класс для работы с API
+ * Базовая функция для API запросов
  */
-class ApiClient {
-  private baseURL: string;
-  private timeout: number;
+async function request<T>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<ApiResponse<T>> {
+  const { skipAuth = false, ...fetchOptions } = options;
+  
+  const url = `${BASE_URL}${endpoint}`;
+  
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...fetchOptions.headers,
+  };
 
-  constructor() {
-    this.baseURL = API_CONFIG.baseURL;
-    this.timeout = API_CONFIG.timeout;
-  }
-
-  /**
-   * Получить токен авторизации из store
-   * В клиентском компоненте можно передать токен напрямую через параметры
-   */
-  private getAuthToken(customToken?: string): string | null {
-    if (customToken) return customToken;
-    
-    if (typeof window === 'undefined') return null;
-    
-    try {
-      const state = JSON.parse(localStorage.getItem('persist:auth') || '{}');
-      const auth = JSON.parse(state.auth || '{}');
-      return auth.accessToken || null;
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Создать заголовки запроса
-   */
-  private getHeaders(customHeaders?: HeadersInit, customToken?: string, isFormData: boolean = false): HeadersInit {
-    const token = this.getAuthToken(customToken);
-
-    // Use Headers instance to safely set headers regardless of incoming HeadersInit shape
-    const headers = new Headers();
-    // Не устанавливаем Content-Type для FormData, браузер сам установит с boundary
-    if (!isFormData) {
-      headers.set('Content-Type', 'application/json');
-    }
-
-    if (customHeaders) {
-      // customHeaders can be Headers, [string, string][], or Record<string, string>
-      if (customHeaders instanceof Headers) {
-        customHeaders.forEach((value, key) => headers.set(key, value));
-      } else if (Array.isArray(customHeaders)) {
-        customHeaders.forEach(([key, value]) => headers.set(key, value));
-      } else {
-        Object.entries(customHeaders).forEach(([key, value]) => headers.set(key, value as string));
-      }
-    }
-
+  // Добавляем Authorization header если есть токен и не пропускаем авторизацию
+  if (!skipAuth) {
+    const token = getToken();
     if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
     }
-
-    return headers;
   }
 
-  /**
-   * Обработка ошибок
-   */
-  private async handleResponse<T>(response: Response): Promise<T> {
-    if (!response.ok) {
-      let errorMessage = `HTTP error! status: ${response.status}`;
-      let errors: Record<string, string[]> | undefined;
+  try {
+    const response = await fetch(url, {
+      ...fetchOptions,
+      headers,
+    });
 
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
-        errors = errorData.errors;
-      } catch {
-        // Если не удалось распарсить JSON, используем текст ответа
-        try {
-          errorMessage = await response.text();
-        } catch {
-          // Оставляем дефолтное сообщение
-        }
-      }
-
-      const error: ApiError = {
-        message: errorMessage,
-        status: response.status,
-        errors,
-      };
-
-      throw error;
+    // Обработка 401 - токен невалиден или истёк
+    if (response.status === 401) {
+      removeToken();
+      // Можно добавить редирект на логин или dispatch logout action
+      // Это будет обработано в Redux thunks
     }
 
-    // Если ответ пустой (например, при DELETE)
-    if (response.status === 204 || response.headers.get('content-length') === '0') {
-      return {} as T;
-    }
-
+    // Пытаемся распарсить JSON
+    let data: T | undefined;
     const contentType = response.headers.get('content-type');
+    
     if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
-      // Если ответ обернут в { data: ... }, извлекаем data
-      return (data.data !== undefined ? data.data : data) as T;
-    }
-
-    return (await response.text()) as unknown as T;
-  }
-
-  /**
-   * Выполнить запрос с таймаутом
-   */
-  private async fetchWithTimeout(
-    url: string,
-    options: RequestInit
-  ): Promise<Response> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Request timeout');
+      try {
+        data = await response.json();
+      } catch {
+        // Ответ не JSON
       }
-      throw error;
     }
-  }
 
-  /**
-   * Базовый метод для выполнения запросов
-   */
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit & { token?: string } = {}
-  ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
-    const { token, ...requestOptions } = options;
-    const isFormData = requestOptions.body instanceof FormData;
-    
-    const config: RequestInit = {
-      ...requestOptions,
-      headers: this.getHeaders(requestOptions.headers, token, isFormData),
+    if (!response.ok) {
+      const errorMessage = 
+        (data as { message?: string })?.message || 
+        (data as { error?: string })?.error || 
+        `Ошибка ${response.status}`;
+      
+      return {
+        error: errorMessage,
+        status: response.status,
+      };
+    }
+
+    return {
+      data,
+      status: response.status,
     };
-
-    try {
-      const response = await this.fetchWithTimeout(url, config);
-      return await this.handleResponse<T>(response);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw {
-          message: error.message,
-          status: 0,
-        } as ApiError;
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * GET запрос
-   */
-  async get<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'GET',
-    });
-  }
-
-  /**
-   * POST запрос
-   */
-  async post<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
-    // Если data - это FormData, передаем напрямую без JSON.stringify
-    const body = data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined);
-    
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'POST',
-      body,
-    });
-  }
-
-  /**
-   * PUT запрос
-   */
-  async put<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
-    });
-  }
-
-  /**
-   * PATCH запрос
-   */
-  async patch<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
-    });
-  }
-
-  /**
-   * DELETE запрос
-   */
-  async delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'DELETE',
-    });
+  } catch (error) {
+    console.error('[API Client] Request error:', error);
+    return {
+      error: error instanceof Error ? error.message : 'Ошибка сети',
+      status: 0,
+    };
   }
 }
 
-// Экспортируем singleton экземпляр
-export const apiClient = new ApiClient();
+/**
+ * GET запрос
+ */
+export function get<T>(endpoint: string, options?: RequestOptions): Promise<ApiResponse<T>> {
+  return request<T>(endpoint, { ...options, method: 'GET' });
+}
 
+/**
+ * POST запрос
+ */
+export function post<T>(
+  endpoint: string,
+  body?: unknown,
+  options?: RequestOptions
+): Promise<ApiResponse<T>> {
+  return request<T>(endpoint, {
+    ...options,
+    method: 'POST',
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
+/**
+ * PUT запрос
+ */
+export function put<T>(
+  endpoint: string,
+  body?: unknown,
+  options?: RequestOptions
+): Promise<ApiResponse<T>> {
+  return request<T>(endpoint, {
+    ...options,
+    method: 'PUT',
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
+/**
+ * DELETE запрос
+ */
+export function del<T>(endpoint: string, options?: RequestOptions): Promise<ApiResponse<T>> {
+  return request<T>(endpoint, { ...options, method: 'DELETE' });
+}
+
+export const apiClient = {
+  get,
+  post,
+  put,
+  delete: del,
+};
+
+export default apiClient;
