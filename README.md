@@ -54,7 +54,7 @@
 cd backend
 dotnet ef database update   # применить миграции
 dotnet run                  # запустить API
-После запуска backend обычно доступен по адресу https://localhost:5001 или https://localhost:7113 (уточните актуальный URL/порт в launchSettings.json).
+После запуска backend обычно доступен по адресу https://localhost:5264 или https://localhost:5001 или https://localhost:7113 (уточните актуальный URL/порт в launchSettings.json).
 
 Запуск frontend
 cd frontend
