@@ -117,7 +117,13 @@ export default function ExpensesPage() {
       dispatch(fetchReceipts());
     }
   };
-  
+  //----------------------------------------------------------------------Дебаг----
+  console.log('useToast:', toast); // null или функция?
+
+useEffect(() => {
+  console.log('ExpensesPage mounted, toast available');
+}, []);
+//--------------------------------------------------------------
   const handleAddPlannedExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseFloat(planForm.plannedAmount);
@@ -399,7 +405,7 @@ export default function ExpensesPage() {
             </SelectTrigger>
             <SelectContent>
               {categories.map((cat) => (
-                <SelectItem key={cat.id} value={String(cat.name)}>
+                <SelectItem key={cat.id} value={String(cat.id)}>
                   {cat.name}
                 </SelectItem>
               ))}
@@ -415,6 +421,7 @@ export default function ExpensesPage() {
             +
           </Button>
         </div>
+        
       </div>
                   <div>
                     <Label htmlFor="manualDescription">Описание</Label>

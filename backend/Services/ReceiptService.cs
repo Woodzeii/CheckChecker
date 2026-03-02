@@ -142,7 +142,7 @@ public class ReceiptService : IReceiptService
 }}";
 
             //var prompt = "Answer 'hello' for test";
-        var rawContent = await CallDeepseekAsync(prompt, ct);
+        var rawContent = await CallaiAsync(prompt, ct);
         Console.WriteLine("Raw content Example:");
         Console.WriteLine(rawContent);
         var jsonOnly   = ExtractJson(rawContent);
@@ -215,14 +215,14 @@ private async Task<string[]> GetOrCreateUserCategoriesAsync(int userId, Cancella
 
 
 
-//ПРИЗЫВ ДИПСИКА ДРЕВЛЯНАМИ
-public async Task<string> CallDeepseekAsync(string userPrompt, CancellationToken ct = default)
+//ПРИЗЫВ ДИПСИКА(теперь просто нейронки) ДРЕВЛЯНАМИ
+public async Task<string> CallaiAsync(string userPrompt, CancellationToken ct = default)
 {
     var client = _clientFactory.CreateClient();
 
     var body = new
     {
-        model = "tngtech/deepseek-r1t2-chimera:free",
+        model = $"{_config["OpenRouter:Model"]}",
         messages = new[]
         {
             new { role = "user", content = userPrompt }
@@ -241,53 +241,53 @@ public async Task<string> CallDeepseekAsync(string userPrompt, CancellationToken
     request.Headers.Add("HTTP-Referer", "https://checkchecker.local");
     request.Headers.Add("X-Title", "CheckChecker");
 
-    using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(90)); // чуть больше
+    using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
 
     try
     {
         using var response = await client.SendAsync(request, linkedCts.Token);
-        response.EnsureSuccessStatusCode();
-
-        var responseJson = await response.Content.ReadAsStringAsync(linkedCts.Token);
         
+        // ← УДАЛИ ЭТУ СТРОКУ:
+        // response.EnsureSuccessStatusCode();
+
+        // ← ЗАМЕНИ НА ЭТО:
+        var responseJson = await response.Content.ReadAsStringAsync(linkedCts.Token);
+        Console.WriteLine($"ai status: {(int)response.StatusCode} {response.StatusCode}");
+        Console.WriteLine("Response preview: " + responseJson.Substring(0, Math.Min(200, responseJson.Length)));
+
+        if (!response.IsSuccessStatusCode)
+        {
+            Console.WriteLine($"ai failed: {response.StatusCode}");
+            return @"{""Products"": []}"; // ← пустой результат
+        }
 
         using var doc = JsonDocument.Parse(responseJson);
         var root = doc.RootElement;
 
-        if (root.TryGetProperty("choices", out var choicesElement)
-            && choicesElement.ValueKind == JsonValueKind.Array
-            && choicesElement.GetArrayLength() > 0)
+        if (root.TryGetProperty("choices", out var choicesElement) &&
+            choicesElement.ValueKind == JsonValueKind.Array &&
+            choicesElement.GetArrayLength() > 0)
         {
             var content = choicesElement[0]
                 .GetProperty("message")
                 .GetProperty("content")
                 .GetString();
 
-            if (!string.IsNullOrEmpty(content))
-                return content;
+            return content ?? @"{""Products"": []}";
         }
 
-// Если дошли сюда — формат ответа не тот, попробуем вытащить error
-        if (root.TryGetProperty("error", out var errorElement))
-        {
-            var msg = errorElement.GetProperty("message").GetString();
-            throw new Exception($"LLM error: {msg ?? "unknown error"}");
-        }
-
-// Если вообще что‑то странное
-        throw new Exception($"Unexpected LLM response: {responseJson}");
-
+        return @"{""Products"": []}"; // fallback
     }
-    catch (OperationCanceledException ex) when (timeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
+    catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
     {
-        // именно timeout внешнего сервиса
-        throw new Exception("Сервис категоризации долго не отвечает, попробуйте позже.");
+        Console.WriteLine("ai timeout");
+        return @"{""Products"": []}";
     }
-    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+    catch (Exception ex)
     {
-        // клиент сам оборвал запрос — можно просто пробросить
-        throw;
+        Console.WriteLine($"ai error: {ex.Message}");
+        return @"{""Products"": []}";
     }
 }
 

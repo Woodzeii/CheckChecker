@@ -41,7 +41,9 @@ export default function AnalyticsPage() {
     : [];
 
   const analytics = monthlyAnalytics;
+  
 
+  
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -297,27 +299,35 @@ export default function AnalyticsPage() {
           )}
 
           {/* Interesting Facts */}
-          {chartData.length > 0 && analytics.byCategory && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Интересные факты</CardTitle>
-                <CardDescription>Статистика за выбранный месяц</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Most expensive category */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Интересные факты</CardTitle>
+              <CardDescription>Статистика за выбранный месяц</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+               {/* Most expensive category */}
                   <div className="p-4 bg-destructive/10 rounded-lg">
                     <p className="text-sm text-muted-foreground mb-1">Самая затратная категория</p>
-                    <p className="text-xl font-bold text-destructive">
-                      {analytics.byCategory.reduce((max, cat) => 
-                        cat.actual > max.actual ? cat : max
-                      ).categoryName}
-                    </p>
-                    <p className="text-sm mt-1">
-                      {formatAmount(analytics.byCategory.reduce((max, cat) => 
-                        cat.actual > max.actual ? cat : max
-                      ).actual)}
-                    </p>
+                    {analytics.byCategory && analytics.byCategory.length > 0 ? (
+                      (() => {
+                        const maxCat = analytics.byCategory.reduce((max, cat) => 
+                          cat.actual > max.actual ? cat : max
+                        );
+                        return (
+                          <>
+                            <p className="text-xl font-bold text-destructive">
+                              {maxCat.categoryName}
+                            </p>
+                            <p className="text-sm mt-1">
+                              {formatAmount(maxCat.actual)}
+                            </p>
+                          </>
+                        );
+                      })()
+                    ) : (
+                      <p className="text-xl font-bold text-muted-foreground">Нет данных</p>
+                    )}
                   </div>
                   {/* Most expensive day */}
                   <div className="p-4 bg-orange-500/10 rounded-lg">
@@ -353,7 +363,7 @@ export default function AnalyticsPage() {
                 </div>
               </CardContent>
             </Card>
-          )}
+          )
 
           
         </>
