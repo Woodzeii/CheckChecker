@@ -8,7 +8,7 @@
 
 - Backend: .NET / ASP.NET Core Web API
 - ORM: Entity Framework Core
-- База данных: (укажите, что используете — например, PostgreSQL или SQLite)
+- База данных: SQLite
 - Frontend: Next.js (React), директория `frontend/`
 - Аутентификация: JWT
 
