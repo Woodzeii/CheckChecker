@@ -1,11 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using backend;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 // Services (ДО Build)
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -27,7 +28,8 @@ builder.Services.AddCors(options =>
 // Db, HttpClient, Services...
 builder.Services.AddHttpClient("Proverkacheka");
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddScoped<IReceiptService, ReceiptService>();
 
 // JWT (один раз)
@@ -46,7 +48,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
-
 // Middleware (порядок критичен!)
 if (app.Environment.IsDevelopment()) {  // Или всегда для Swagger
     app.UseSwagger();

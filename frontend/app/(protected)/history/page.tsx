@@ -140,7 +140,7 @@ export default function HistoryPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`text-xl font-bold ${analytics.currentBudget >= 0 ? 'text-accent' : 'text-destructive'}`}>
+                <div className={`text-xl font-bold ${analytics.currentBudget >= 0 ? '' : 'text-destructive'}`}>
                   {formatAmount(analytics.currentBudget)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Текущий</p>
@@ -189,12 +189,12 @@ export default function HistoryPage() {
                             {formatAmount(category.actual)}
                           </TableCell>
                           <TableCell className={`text-right font-semibold ${
-                            category.difference > 0 ? 'text-destructive' : 'text-accent'
+                            category.difference > 0 ? 'text-destructive' : ''
                           }`}>
                             {category.difference > 0 ? '+' : ''}{formatAmount(category.difference)}
                           </TableCell>
                           <TableCell className={`text-right font-semibold ${
-                            isOverBudget ? 'text-destructive' : 'text-accent'
+                            isOverBudget ? 'text-destructive' : ''
                           }`}>
                             {percentage}%
                           </TableCell>
@@ -213,7 +213,7 @@ export default function HistoryPage() {
                       <TableCell className={`text-right ${
                         analytics.actualExpensesTotal > analytics.plannedExpensesTotal
                           ? 'text-destructive'
-                          : 'text-accent'
+                          : ''
                       }`}>
                         {analytics.actualExpensesTotal > analytics.plannedExpensesTotal ? '+' : ''}
                         {formatAmount(analytics.actualExpensesTotal - analytics.plannedExpensesTotal)}
@@ -221,7 +221,7 @@ export default function HistoryPage() {
                       <TableCell className={`text-right ${
                         analytics.actualExpensesTotal > analytics.plannedExpensesTotal
                           ? 'text-destructive'
-                          : 'text-accent'
+                          : ''
                       }`}>
                         {analytics.plannedExpensesTotal > 0
                           ? Math.round((analytics.actualExpensesTotal / analytics.plannedExpensesTotal) * 100)
@@ -258,7 +258,7 @@ export default function HistoryPage() {
                 </div>
                 <div className="flex justify-between items-center p-3 bg-accent/10 rounded-lg">
                   <span className="text-sm font-medium">Всего доходов</span>
-                  <span className="font-bold text-accent">
+                  <span className="font-bold ">
                     +{formatAmount(analytics.actualIncome)}
                   </span>
                 </div>
@@ -267,7 +267,7 @@ export default function HistoryPage() {
                 }`}>
                   <span className="text-base font-semibold">Текущий баланс</span>
                   <span className={`text-xl font-bold ${
-                    analytics.currentBudget >= 0 ? 'text-accent' : 'text-destructive'
+                    analytics.currentBudget >= 0 ? '' : 'text-destructive'
                   }`}>
                     {formatAmount(analytics.currentBudget)}
                   </span>

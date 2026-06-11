@@ -85,7 +85,16 @@ public class AnalyticsController : ControllerBase
             x.Receipt.DateTime < end)
         .ToListAsync();
 
-    // Группировка по строковому Category
+    // ручные расходы за месяц с категориями
+    var manualExpenses = await _context.ManualExpenses
+        .Include(x => x.Category)
+        .Where(x =>
+            x.UserId == userId &&
+            x.DateTime >= start &&
+            x.DateTime < end)
+        .ToListAsync();
+
+    // Группировка по строковому Category из чеков
     var actualByCategory = receiptItems
         .GroupBy(x => x.Category ?? "Без категории")
         .Select(g => new
@@ -94,6 +103,31 @@ public class AnalyticsController : ControllerBase
             Actual = g.Sum(i => i.Sum)
         })
         .ToList();
+
+    // Добавляем вручные расходы по категориям
+    foreach (var manual in manualExpenses)
+    {
+        var categoryName = manual.Category?.Name ?? "Без категории";
+        var existing = actualByCategory.FirstOrDefault(x => x.CategoryName == categoryName);
+        
+        if (existing != null)
+        {
+            actualByCategory.Remove(existing);
+            actualByCategory.Add(new
+            {
+                CategoryName = categoryName,
+                Actual = existing.Actual + manual.Amount
+            });
+        }
+        else
+        {
+            actualByCategory.Add(new
+            {
+                CategoryName = categoryName,
+                Actual = manual.Amount
+            });
+        }
+    }
 
 
 

@@ -591,9 +591,9 @@ useEffect(() => {
                   <Label>Категория</Label>
                   <div className="flex gap-2">
                   <Select
-                    value={manualForm.categoryName}
+                    value={planForm.categoryName}
                     onValueChange={(value) =>
-                      setManualForm((prev) => ({ ...prev, categoryName: value }))
+                      setPlanForm((prev) => ({ ...prev, categoryName: value }))
                     }
                   >
                     <SelectTrigger className="w-full">

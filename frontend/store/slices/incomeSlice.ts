@@ -8,14 +8,14 @@ export interface Income {
   userId: number;
   date: string;
   amount: number;
-  category: string;
-  description: string;
+  categoryName?: string | null;
+  description?: string | null;
 }
 
 export interface AddIncomePayload {
   date: string;
   amount: number;
-  category: string;
+  categoryName?: string;
   description?: string;
   saveAsRecurring?: boolean;
 }

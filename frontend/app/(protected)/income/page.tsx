@@ -45,7 +45,7 @@ export default function IncomePage() {
   const [incomeForm, setIncomeForm] = useState({
     date: new Date().toISOString().split('T')[0],
     amount: '',
-    category: '',
+    categoryName: '',
     description: '',
     saveAsRecurring: false,
   });
@@ -73,7 +73,7 @@ export default function IncomePage() {
         addIncome({
           date: incomeForm.date,
           amount,
-          category: incomeForm.category,
+          categoryName: incomeForm.categoryName,
           description: incomeForm.description,
           saveAsRecurring: incomeForm.saveAsRecurring,
         })
@@ -81,7 +81,7 @@ export default function IncomePage() {
       setIncomeForm({
         date: new Date().toISOString().split('T')[0],
         amount: '',
-        category: '',
+        categoryName: '',
         description: '',
         saveAsRecurring: false,
       });
@@ -174,12 +174,12 @@ export default function IncomePage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="category">Категория</Label>
+                    <Label htmlFor="categoryName">Категория</Label>
                     <Input
-                      id="category"
+                      id="categoryName"
                       placeholder="Зарплата, Фриланс, Инвестиции..."
-                      value={incomeForm.category}
-                      onChange={(e) => setIncomeForm({ ...incomeForm, category: e.target.value })}
+                      value={incomeForm.categoryName}
+                      onChange={(e) => setIncomeForm({ ...incomeForm, categoryName: e.target.value })}
                       required
                     />
                   </div>
@@ -401,7 +401,7 @@ export default function IncomePage() {
                     <TableCell>
                       {new Date(income.date).toLocaleDateString('ru-RU')}
                     </TableCell>
-                    <TableCell className="font-medium">{income.category}</TableCell>
+                    <TableCell className="font-medium">{income.categoryName || '-'}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {income.description || '-'}
                     </TableCell>

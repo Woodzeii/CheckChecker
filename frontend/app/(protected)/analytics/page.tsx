@@ -99,7 +99,7 @@ export default function AnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${analytics.currentBudget >= 0 ? 'text-accent' : 'text-destructive'}`}>
+                <div className={`text-2xl font-bold ${analytics.currentBudget >= 0 ? '' : 'text-destructive'}`}>
                   {formatAmount(analytics.currentBudget)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -144,7 +144,7 @@ export default function AnalyticsPage() {
                 <p className="text-xs text-muted-foreground mt-1">
                   План: {formatAmount(analytics.plannedExpensesTotal)}
                   {analytics.plannedExpensesTotal > 0 && (
-                    <span className={`ml-1 ${analytics.actualExpensesTotal <= analytics.plannedExpensesTotal ? 'text-accent' : 'text-destructive'}`}>
+                    <span className={`ml-1 ${analytics.actualExpensesTotal <= analytics.plannedExpensesTotal ? '' : 'text-destructive'}`}>
                       ({Math.round((analytics.actualExpensesTotal / analytics.plannedExpensesTotal) * 100)}%)
                     </span>
                   )}
@@ -173,17 +173,17 @@ export default function AnalyticsPage() {
                       {formatAmount(analytics.actualExpensesTotal)}
                     </p>
                   </div>
-                  <span className="text-2xl text-accent font-bold">+</span>
+                  <span className="text-2xl text-green-600 font-bold">+</span>
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Доходы</p>
-                    <p className="text-xl font-bold text-accent">
+                    <p className="text-xl text-green-600 font-bold ">
                       {formatAmount(analytics.actualIncome)}
                     </p>
                   </div>
                   <span className="text-2xl font-bold">=</span>
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Текущий</p>
-                    <p className={`text-xl font-bold ${analytics.currentBudget >= 0 ? 'text-accent' : 'text-destructive'}`}>
+                    <p className={`text-xl font-bold ${analytics.currentBudget >= 0 ? '' : 'text-destructive'}`}>
                       {formatAmount(analytics.currentBudget)}
                     </p>
                   </div>
