@@ -1,3 +1,4 @@
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using backend;
@@ -67,3 +68,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+
+public partial class Program { } // Для тестов, чтобы они видели точку входа и могли наследоваться от WebApplicationFactory<Program>
